@@ -1,8 +1,13 @@
 package bst
 
 import (
+	"errors"
 	"fmt"
 	"sync"
+)
+
+var (
+	ERR_NOT_FOUND = errors.New("elem not found")
 )
 
 func NewBST() *BST {
@@ -17,20 +22,47 @@ type BST struct {
 func (b *BST) Insert(val int) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if b.Root == nil {
-		b.Root = newNode(val)
-		return nil
-	}
-	return b.Root.insert(val)
+	item := newNode(val)
+	return b.insert(item)
 }
 
-func (b *BST) Find(val int) bool {
+func (b *BST) insert(item *Node) error {
+
+	var y *Node
+	x := b.Root
+
+	for x != nil {
+		y = x
+		if item.Value < x.Value {
+			// insert value into the left node
+			x = x.Left
+		} else if item.Value > x.Value {
+			// insert value into the left node
+			x = x.Right
+		} else {
+			// value exists
+			return nil
+		}
+	}
+	item.Parent = y
+	if y == nil {
+		b.Root = item
+		return nil
+	} else if item.Value < y.Value {
+		y.Left = item
+	} else {
+		y.Right = item
+	}
+	return nil
+}
+
+func (b *BST) Search(val int) *Node {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.Root == nil {
-		return false
+		return nil
 	}
-	return b.Root.find(val)
+	return b.Root.search(val)
 }
 
 func (b *BST) Delete(val int) {
@@ -43,7 +75,48 @@ func (b *BST) Delete(val int) {
 func (b *BST) Traverse() {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	b.Root.traverse()
+	fn := func(n *Node) {
+		fmt.Println(n.Value)
+	}
+	b.Root.traverse(fn)
+}
+
+func (b *BST) Minimum() int {
+	if b.Root == nil {
+		return 0
+	}
+	return b.Root.minimum().Value
+}
+
+func (b *BST) Maximum() int {
+	if b.Root == nil {
+		return 0
+	}
+	return b.Root.maximum().Value
+}
+
+func (b *BST) Predecessor(val int) (int, error) {
+	item := b.Search(val)
+	if item == nil {
+		return 0, ERR_NOT_FOUND
+	}
+	n := item.predecessor()
+	if n == nil {
+		return 0, ERR_NOT_FOUND
+	}
+	return n.Value, nil
+}
+
+func (b *BST) Successor(val int) (int, error) {
+	item := b.Search(val)
+	if item == nil {
+		return 0, ERR_NOT_FOUND
+	}
+	n := item.successor()
+	if n == nil {
+		return 0, ERR_NOT_FOUND
+	}
+	return n.Value, nil
 }
 
 func newNode(val int) *Node {
@@ -51,68 +124,88 @@ func newNode(val int) *Node {
 }
 
 type Node struct {
-	Left  *Node
-	Right *Node
-	Value int
+	Parent *Node
+	Left   *Node
+	Right  *Node
+	Value  int
 }
 
-func (n *Node) insert(val int) error {
+func (n *Node) search(val int) *Node {
 	switch {
 	case val == n.Value:
-		return nil
+		return n
 	case val < n.Value:
 		if n.Left == nil {
-			n.Left = newNode(val)
 			return nil
 		}
-		return n.Left.insert(val)
+		return n.Left.search(val)
 	case val > n.Value:
 		if n.Right == nil {
-			n.Right = newNode(val)
 			return nil
 		}
-		return n.Right.insert(val)
+		return n.Right.search(val)
 	}
 	return nil
+
 }
 
-func (n *Node) find(val int) bool {
-	switch {
-	case val == n.Value:
-		return true
-	case val < n.Value:
-		if n.Left == nil {
-			return false
-		}
-		return n.Left.find(val)
-	case val > n.Value:
-		if n.Right == nil {
-			return false
-		}
-		return n.Right.find(val)
+func (n *Node) successor() *Node {
+	return findSuccessor(n)
+}
+
+func (n *Node) predecessor() *Node {
+	return findPredecessor(n)
+}
+
+func (n *Node) minimum() *Node {
+	for n.Left != nil {
+		n = n.Left
 	}
-	return false
-
+	return n
 }
 
-func (n *Node) traverse() {
+func (n *Node) maximum() *Node {
+	for n.Right != nil {
+		n = n.Right
+	}
+	return n
+}
+
+func (n *Node) traverse(fn func(*Node)) {
 	if n == nil {
 		return
 	}
-	n.Left.traverse()
-	fmt.Println(n.Value)
-	n.Right.traverse()
+	n.Left.traverse(fn)
+	fn(n)
+	n.Right.traverse(fn)
 }
 
 func swapNode(a, b *Node) {
 	*a, *b = *b, *a
 }
 
-func findSuccessor(a *Node) *Node {
-	if a.Right == nil {
-		return a
+func findSuccessor(x *Node) *Node {
+	if x.Right != nil {
+		return x.Right.minimum()
 	}
-	return findSuccessor(a.Right)
+	y := x.Parent
+	for y != nil && x == y.Right {
+		x = y
+		y = y.Parent
+	}
+	return y
+}
+
+func findPredecessor(x *Node) *Node {
+	if x.Left != nil {
+		return x.Left.maximum()
+	}
+	y := x.Parent
+	for y != nil && x == y.Left {
+		x = y
+		y = y.Parent
+	}
+	return y
 }
 
 func removeNode(a *Node, val int) *Node {
