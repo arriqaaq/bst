@@ -19,10 +19,10 @@ type BST struct {
 	Root *Node
 }
 
-func (b *BST) Insert(val int) error {
+func (b *BST) Insert(key int, value string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	item := newNode(val)
+	item := newNode(key, value)
 	return b.insert(item)
 }
 
@@ -33,14 +33,14 @@ func (b *BST) insert(item *Node) error {
 
 	for x != nil {
 		y = x
-		if item.Value < x.Value {
-			// insert value into the left node
+		if item.Key < x.Key {
+			// insert key into the left node
 			x = x.Left
-		} else if item.Value > x.Value {
-			// insert value into the left node
+		} else if item.Key > x.Key {
+			// insert key into the left node
 			x = x.Right
 		} else {
-			// value exists
+			// key exists
 			return nil
 		}
 	}
@@ -48,7 +48,7 @@ func (b *BST) insert(item *Node) error {
 	if y == nil {
 		b.Root = item
 		return nil
-	} else if item.Value < y.Value {
+	} else if item.Key < y.Key {
 		y.Left = item
 	} else {
 		y.Right = item
@@ -56,19 +56,19 @@ func (b *BST) insert(item *Node) error {
 	return nil
 }
 
-func (b *BST) Search(val int) *Node {
+func (b *BST) Search(key int) *Node {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.Root == nil {
 		return nil
 	}
-	return b.Root.search(val)
+	return b.Root.search(key)
 }
 
-func (b *BST) Delete(val int) {
+func (b *BST) Delete(key int) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	removeNode(b.Root, val)
+	removeNode(b.Root, key)
 }
 
 // Inorder traversal
@@ -76,7 +76,7 @@ func (b *BST) Traverse() {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	fn := func(n *Node) {
-		fmt.Println(n.Value)
+		fmt.Println(n.Key)
 	}
 	b.Root.traverse(fn)
 }
@@ -85,18 +85,18 @@ func (b *BST) Minimum() int {
 	if b.Root == nil {
 		return 0
 	}
-	return b.Root.minimum().Value
+	return b.Root.minimum().Key
 }
 
 func (b *BST) Maximum() int {
 	if b.Root == nil {
 		return 0
 	}
-	return b.Root.maximum().Value
+	return b.Root.maximum().Key
 }
 
-func (b *BST) Predecessor(val int) (int, error) {
-	item := b.Search(val)
+func (b *BST) Predecessor(key int) (int, error) {
+	item := b.Search(key)
 	if item == nil {
 		return 0, ERR_NOT_FOUND
 	}
@@ -104,11 +104,11 @@ func (b *BST) Predecessor(val int) (int, error) {
 	if n == nil {
 		return 0, ERR_NOT_FOUND
 	}
-	return n.Value, nil
+	return n.Key, nil
 }
 
-func (b *BST) Successor(val int) (int, error) {
-	item := b.Search(val)
+func (b *BST) Successor(key int) (int, error) {
+	item := b.Search(key)
 	if item == nil {
 		return 0, ERR_NOT_FOUND
 	}
@@ -116,34 +116,35 @@ func (b *BST) Successor(val int) (int, error) {
 	if n == nil {
 		return 0, ERR_NOT_FOUND
 	}
-	return n.Value, nil
+	return n.Key, nil
 }
 
-func newNode(val int) *Node {
-	return &Node{Value: val}
+func newNode(key int, val string) *Node {
+	return &Node{Key: key, Value: val}
 }
 
 type Node struct {
 	Parent *Node
 	Left   *Node
 	Right  *Node
-	Value  int
+	Key    int
+	Value  string
 }
 
-func (n *Node) search(val int) *Node {
+func (n *Node) search(key int) *Node {
 	switch {
-	case val == n.Value:
+	case key == n.Key:
 		return n
-	case val < n.Value:
+	case key < n.Key:
 		if n.Left == nil {
 			return nil
 		}
-		return n.Left.search(val)
-	case val > n.Value:
+		return n.Left.search(key)
+	case key > n.Key:
 		if n.Right == nil {
 			return nil
 		}
-		return n.Right.search(val)
+		return n.Right.search(key)
 	}
 	return nil
 
@@ -208,16 +209,16 @@ func findPredecessor(x *Node) *Node {
 	return y
 }
 
-func removeNode(a *Node, val int) *Node {
+func removeNode(a *Node, key int) *Node {
 	if a == nil {
 		return nil
 	}
-	if val < a.Value {
-		a.Left = removeNode(a.Left, val)
+	if key < a.Key {
+		a.Left = removeNode(a.Left, key)
 		return a
 	}
-	if val > a.Value {
-		a.Right = removeNode(a.Right, val)
+	if key > a.Key {
+		a.Right = removeNode(a.Right, key)
 		return a
 	}
 	// Remove leaf node
@@ -237,7 +238,7 @@ func removeNode(a *Node, val int) *Node {
 	}
 	// Remove half parent node
 	tempNode := findSuccessor(a.Left)
-	a.Value = tempNode.Value
-	a.Left = removeNode(a.Left, tempNode.Value)
+	a.Key = tempNode.Key
+	a.Left = removeNode(a.Left, tempNode.Key)
 	return a
 }
