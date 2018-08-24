@@ -59,10 +59,24 @@ func (b *BST) insert(item *Node) error {
 func (b *BST) Search(key int) *Node {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	if b.Root == nil {
+	x := b.Root
+
+	if x == nil {
 		return nil
 	}
-	return b.Root.search(key)
+
+	for x != nil {
+		switch {
+		case key == x.Key:
+			return x
+		case key < x.Key:
+			x = x.Left
+		case key > x.Key:
+			x = x.Right
+		}
+	}
+
+	return nil
 }
 
 func (b *BST) Delete(key int) {
@@ -129,25 +143,6 @@ type Node struct {
 	Right  *Node
 	Key    int
 	Value  string
-}
-
-func (n *Node) search(key int) *Node {
-	switch {
-	case key == n.Key:
-		return n
-	case key < n.Key:
-		if n.Left == nil {
-			return nil
-		}
-		return n.Left.search(key)
-	case key > n.Key:
-		if n.Right == nil {
-			return nil
-		}
-		return n.Right.search(key)
-	}
-	return nil
-
 }
 
 func (n *Node) successor() *Node {
