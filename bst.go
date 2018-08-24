@@ -151,11 +151,27 @@ func (n *Node) search(key int) *Node {
 }
 
 func (n *Node) successor() *Node {
-	return findSuccessor(n)
+	if n.Right != nil {
+		return n.Right.minimum()
+	}
+	y := n.Parent
+	for y != nil && n == y.Right {
+		n = y
+		y = y.Parent
+	}
+	return y
 }
 
 func (n *Node) predecessor() *Node {
-	return findPredecessor(n)
+	if n.Left != nil {
+		return n.Left.maximum()
+	}
+	y := n.Parent
+	for y != nil && n == y.Left {
+		n = y
+		y = y.Parent
+	}
+	return y
 }
 
 func (n *Node) minimum() *Node {
@@ -183,30 +199,6 @@ func (n *Node) traverse(fn func(*Node)) {
 
 func swapNode(a, b *Node) {
 	*a, *b = *b, *a
-}
-
-func findSuccessor(x *Node) *Node {
-	if x.Right != nil {
-		return x.Right.minimum()
-	}
-	y := x.Parent
-	for y != nil && x == y.Right {
-		x = y
-		y = y.Parent
-	}
-	return y
-}
-
-func findPredecessor(x *Node) *Node {
-	if x.Left != nil {
-		return x.Left.maximum()
-	}
-	y := x.Parent
-	for y != nil && x == y.Left {
-		x = y
-		y = y.Parent
-	}
-	return y
 }
 
 func removeNode(a *Node, key int) *Node {
@@ -237,7 +229,7 @@ func removeNode(a *Node, key int) *Node {
 		return a
 	}
 	// Remove half parent node
-	tempNode := findSuccessor(a.Left)
+	tempNode := a.Left.successor()
 	a.Key = tempNode.Key
 	a.Left = removeNode(a.Left, tempNode.Key)
 	return a
